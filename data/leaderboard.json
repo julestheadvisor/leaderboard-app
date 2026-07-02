@@ -1,80 +1,83 @@
 {
   "groups": [
     {
-      "id": "25cdd6f7-0b4c-4b15-9eab-cc69f8e7efa2",
-      "name": "1",
-      "createdAt": "2026-07-02T05:56:07.463Z"
+      "id": "6e250e33-a5a0-4800-8b2d-e74dbcee09a7",
+      "name": "173483",
+      "createdAt": "2026-07-02T09:46:06.515Z"
     },
     {
-      "id": "05afa006-1bb2-4202-be38-58fa7600f182",
-      "name": "2",
-      "createdAt": "2026-07-02T05:56:09.369Z"
-    },
-    {
-      "id": "6685ff72-01c0-4ee2-9f31-fd81072858f3",
+      "id": "b48b77e1-a55e-4a69-ba8e-e552d44613c3",
       "name": "3",
-      "createdAt": "2026-07-02T05:56:12.657Z"
+      "createdAt": "2026-07-02T09:46:11.140Z"
     },
     {
-      "id": "893689fc-3f46-4531-ac2c-7c024dc4dafe",
-      "name": "sdf",
-      "createdAt": "2026-07-02T09:24:30.497Z"
+      "id": "aca03211-5490-45f0-a3e8-678d74438e29",
+      "name": "4",
+      "createdAt": "2026-07-02T09:46:12.562Z"
     },
     {
-      "id": "786764ec-265f-4a71-9368-d11f820a2479",
-      "name": "sdfgdfb",
-      "createdAt": "2026-07-02T09:24:33.256Z"
+      "id": "5dfddc7a-d042-452e-912e-d2eb66b2e670",
+      "name": "5",
+      "createdAt": "2026-07-02T09:46:14.704Z"
     },
     {
-      "id": "6fa824f1-9af6-4aec-994a-ff442b812538",
-      "name": "jy",
-      "createdAt": "2026-07-02T09:24:35.065Z"
+      "id": "f007b94b-d373-4f6e-8a2f-b2fa6cb613dc",
+      "name": "8",
+      "createdAt": "2026-07-02T09:46:20.587Z"
     },
     {
-      "id": "7278a314-f682-4cdc-a407-1a517cfea0bf",
-      "name": "dfbdfxc",
-      "createdAt": "2026-07-02T09:24:37.082Z"
+      "id": "d2ec70bf-af74-4ba1-9b20-62948d6b60f2",
+      "name": "9",
+      "createdAt": "2026-07-02T09:46:22.599Z"
     },
     {
-      "id": "c78171a2-813a-4976-b194-d743ad2f74e0",
-      "name": "tdttjeh",
-      "createdAt": "2026-07-02T09:24:38.689Z"
+      "id": "b94a76c1-9379-431d-9c24-e3abd05f845e",
+      "name": "10",
+      "createdAt": "2026-07-02T09:46:25.204Z"
     },
     {
-      "id": "288f61d0-8053-4a0b-a07b-0fedf11f0df1",
-      "name": "rgerbgv",
-      "createdAt": "2026-07-02T09:24:40.709Z"
-    },
-    {
-      "id": "87684a5f-d8b0-4e6e-bc10-80e79ea7e5cf",
-      "name": "h",
-      "createdAt": "2026-07-02T09:31:02.791Z"
-    },
-    {
-      "id": "9faa8b03-f380-42fe-bf4f-3333e6d7b43b",
-      "name": "trt",
-      "createdAt": "2026-07-02T09:31:05.129Z"
+      "id": "e809f93d-cb12-4e7c-b382-bc2379b40185",
+      "name": "11",
+      "createdAt": "2026-07-02T09:46:28.132Z"
     }
   ],
   "scores": [
     {
-      "id": "3ad03cbf-ae62-4285-9769-607567ea2102",
-      "groupId": "25cdd6f7-0b4c-4b15-9eab-cc69f8e7efa2",
-      "value": 100,
-      "createdAt": "2026-07-02T05:56:25.192Z"
+      "id": "623fa004-9dfc-42d4-9d9f-2a6e9186c11d",
+      "groupId": "6e250e33-a5a0-4800-8b2d-e74dbcee09a7",
+      "value": 123,
+      "createdAt": "2026-07-02T09:46:34.521Z"
     },
     {
-      "id": "87df6391-7aaf-4ecb-97f8-eda6e6530bde",
-      "groupId": "05afa006-1bb2-4202-be38-58fa7600f182",
-      "value": 100,
-      "createdAt": "2026-07-02T05:56:30.460Z"
+      "id": "8e3e718e-43c4-4f81-b233-42ea9ce1d71f",
+      "groupId": "b48b77e1-a55e-4a69-ba8e-e552d44613c3",
+      "value": 947,
+      "createdAt": "2026-07-02T09:46:42.409Z"
     },
     {
-      "id": "d2b0b778-d476-48c4-8ec8-d18fb141e0c3",
-      "groupId": "05afa006-1bb2-4202-be38-58fa7600f182",
-      "value": 1,
-      "createdAt": "2026-07-02T05:56:40.049Z"
+      "id": "45092696-6759-496c-8d1d-a57e845ffaa7",
+      "groupId": "b48b77e1-a55e-4a69-ba8e-e552d44613c3",
+      "value": -500,
+      "createdAt": "2026-07-02T09:46:49.908Z"
+    },
+    {
+      "id": "e7bf732f-23ac-4e76-83cf-dff101cfdc73",
+      "groupId": "b48b77e1-a55e-4a69-ba8e-e552d44613c3",
+      "value": -400,
+      "createdAt": "2026-07-02T09:46:57.130Z"
+    },
+    {
+      "id": "ebede419-9ea6-4924-9c87-15f71f7e0fad",
+      "groupId": "d2ec70bf-af74-4ba1-9b20-62948d6b60f2",
+      "value": -200,
+      "createdAt": "2026-07-02T09:47:22.227Z"
+    },
+    {
+      "id": "6127a40f-7125-407b-83a0-0dc2f35a4305",
+      "groupId": "f007b94b-d373-4f6e-8a2f-b2fa6cb613dc",
+      "value": -200,
+      "createdAt": "2026-07-02T09:47:35.260Z"
     }
   ],
-  "updatedAt": "2026-07-02T09:31:05.129Z"
+  "updatedAt": "2026-07-02T09:48:02.975Z"
 }
