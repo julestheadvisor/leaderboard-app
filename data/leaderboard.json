@@ -1,0 +1,23 @@
+{
+  "groups": [
+    {
+      "id": "8f1db4fb-f0e3-4270-abc7-e23b63de4483",
+      "name": "asdasd",
+      "createdAt": "2026-07-01T10:21:50.160Z"
+    },
+    {
+      "id": "1483ed97-a131-4b99-879e-3f53c5ae920d",
+      "name": "svddsvvsd",
+      "createdAt": "2026-07-01T10:29:08.045Z"
+    }
+  ],
+  "scores": [
+    {
+      "id": "f7363c69-a861-43ea-8979-80f43beaaf90",
+      "groupId": "8f1db4fb-f0e3-4270-abc7-e23b63de4483",
+      "value": 231312,
+      "createdAt": "2026-07-01T10:21:56.121Z"
+    }
+  ],
+  "updatedAt": "2026-07-01T10:29:08.045Z"
+}
