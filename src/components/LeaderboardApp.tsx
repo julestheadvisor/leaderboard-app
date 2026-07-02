@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  FormEvent,
   memo,
   useCallback,
   useLayoutEffect,
@@ -35,9 +34,7 @@ type LeaderboardState = {
   updatedAt: string;
 };
 
-type ModalMode = "group" | "score" | "editGroup" | "removeGroup" | null;
 type ConnectionState = "connecting" | "connected" | "reconnecting";
-type OpenModal = (mode: Exclude<ModalMode, null>) => void;
 type OpenGroupDetails = (groupId: string) => void;
 
 const emptyState: LeaderboardState = {
@@ -70,12 +67,6 @@ function ordinal(rank: number) {
             : "th";
 
   return `${rank}${suffix}`;
-}
-
-function sanitizeScoreInput(value: string) {
-  const sign = value.startsWith("-") ? "-" : "";
-  const digits = value.replace(/\D/g, "");
-  return `${sign}${digits}`;
 }
 
 function formatScoreDelta(value: number) {
@@ -112,32 +103,6 @@ function rankBadgeClass(rank: number) {
   }
 
   return "border-[#26ffa7]/40 bg-[#112d25] text-[#26ffa7]";
-}
-
-function modalTitle(mode: Exclude<ModalMode, null>) {
-  switch (mode) {
-    case "group":
-      return "Add Group";
-    case "score":
-      return "Add Score";
-    case "editGroup":
-      return "Edit Group";
-    case "removeGroup":
-      return "Remove Group";
-  }
-}
-
-function modalDescription(mode: Exclude<ModalMode, null>) {
-  switch (mode) {
-    case "group":
-      return "Create a new competition group.";
-    case "score":
-      return "Choose a group and submit a score.";
-    case "editGroup":
-      return "Choose a group and update its name.";
-    case "removeGroup":
-      return "Choose a group to delete with all of its scores.";
-  }
 }
 
 const RankingsCard = memo(function RankingsCard({
@@ -357,84 +322,15 @@ const RankingsCard = memo(function RankingsCard({
   );
 });
 
-const SessionPanel = memo(function SessionPanel({
-  groups,
-  onOpenModal,
-}: {
-  groups: LeaderboardGroup[];
-  onOpenModal: OpenModal;
-}) {
-  return (
-    <aside className="self-start rounded-md border border-[#2d463f] bg-[#101820]/95 p-4 shadow-lg shadow-black/20">
-      <h2 className="font-mono text-lg font-bold uppercase text-[#ffd166]">Session</h2>
-      <dl className="mt-4 grid gap-3 text-sm">
-        <div className="flex items-center justify-between border-b border-[#24342f] pb-3">
-          <dt className="text-[#9fb8b0]">Groups</dt>
-          <dd className="font-bold text-white tabular-nums">{groups.length}</dd>
-        </div>
-        <div className="flex items-center justify-between">
-          <dt className="text-[#9fb8b0]">Leader</dt>
-          <dd className="max-w-40 truncate font-bold text-white">
-            {groups[0]?.name ?? "None"}
-          </dd>
-        </div>
-      </dl>
-      <div className="mt-5 grid grid-cols-2 gap-2">
-        <button
-          className="h-10 rounded-md bg-[#26ffa7] px-1 font-mono text-sm font-bold uppercase text-[#07100d] transition hover:bg-[#8dffd4] focus:outline-none focus:ring-2 focus:ring-[#26ffa7] focus:ring-offset-2 focus:ring-offset-[#0b0f14]"
-          type="button"
-          onClick={() => onOpenModal("group")}
-        >
-          Add Group
-        </button>
-        <button
-          className="h-10 rounded-md bg-[#ffd166] px-1 font-mono text-sm font-bold uppercase text-[#140f03] transition hover:bg-[#ffe39a] focus:outline-none focus:ring-2 focus:ring-[#ffd166] focus:ring-offset-2 focus:ring-offset-[#0b0f14] disabled:cursor-not-allowed disabled:bg-[#665b3d] disabled:text-[#b7ab86]"
-          type="button"
-          disabled={groups.length === 0}
-          onClick={() => onOpenModal("score")}
-        >
-          Add Score
-        </button>
-        <button
-          className="h-10 rounded-md bg-[#5eead4] px-1 font-mono text-sm font-bold uppercase text-[#041412] transition hover:bg-[#99f6e4] focus:outline-none focus:ring-2 focus:ring-[#5eead4] focus:ring-offset-2 focus:ring-offset-[#0b0f14] disabled:cursor-not-allowed disabled:bg-[#47625e] disabled:text-[#9db9b4]"
-          type="button"
-          disabled={groups.length === 0}
-          onClick={() => onOpenModal("editGroup")}
-        >
-          Edit Group
-        </button>
-        <button
-          className="h-10 rounded-md bg-[#ff5c7a] px-1 font-mono text-sm font-bold uppercase text-[#170408] transition hover:bg-[#ff8fa3] focus:outline-none focus:ring-2 focus:ring-[#ff5c7a] focus:ring-offset-2 focus:ring-offset-[#0b0f14] disabled:cursor-not-allowed disabled:bg-[#6a3b45] disabled:text-[#bd9aa2]"
-          type="button"
-          disabled={groups.length === 0}
-          onClick={() => onOpenModal("removeGroup")}
-        >
-          <span className="whitespace-nowrap">Remove Group</span>
-        </button>
-      </div>
-    </aside>
-  );
-});
-
 export default function LeaderboardApp({
   initialState = emptyState,
 }: {
   initialState?: LeaderboardState;
 }) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardState>(initialState);
-  const [modalMode, setModalMode] = useState<ModalMode>(null);
-  const [groupName, setGroupName] = useState("");
-  const [selectedGroupId, setSelectedGroupId] = useState(initialState.groups[0]?.id ?? "");
   const [selectedDetailGroupId, setSelectedDetailGroupId] = useState<string | null>(null);
-  const [score, setScore] = useState("");
-  const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
-
-  const selectedGroup = useMemo(
-    () => leaderboard.groups.find((group) => group.id === selectedGroupId),
-    [leaderboard.groups, selectedGroupId],
-  );
 
   const selectedDetailGroup = useMemo(
     () => leaderboard.groups.find((group) => group.id === selectedDetailGroupId),
@@ -451,16 +347,6 @@ export default function LeaderboardApp({
     [leaderboard.scores, selectedDetailGroup],
   );
 
-  const groupOptions = useMemo(
-    () =>
-      leaderboard.groups.map((group) => (
-        <option key={group.id} value={group.id}>
-          {group.name}
-        </option>
-      )),
-    [leaderboard.groups],
-  );
-
   useEffect(() => {
     let isMounted = true;
     let hasOpenedLiveStream = false;
@@ -471,13 +357,13 @@ export default function LeaderboardApp({
         .then((state: LeaderboardState) => {
           if (isMounted) {
             setLeaderboard(state);
-            setSelectedGroupId((current) => current || state.groups[0]?.id || "");
+            setLoadError("");
           }
         });
 
     refreshLeaderboard().catch(() => {
         if (isMounted) {
-          setError("Unable to load the leaderboard.");
+          setLoadError("Unable to load the leaderboard.");
         }
       });
 
@@ -491,13 +377,7 @@ export default function LeaderboardApp({
     events.onmessage = (event) => {
       const state = JSON.parse(event.data) as LeaderboardState;
       setLeaderboard(state);
-      setSelectedGroupId((current) => {
-        if (current && state.groups.some((group) => group.id === current)) {
-          return current;
-        }
-
-        return state.groups[0]?.id || "";
-      });
+      setLoadError("");
     };
 
     const connectionFallback = window.setTimeout(() => {
@@ -520,148 +400,9 @@ export default function LeaderboardApp({
     };
   }, []);
 
-  const openModal = useCallback((mode: Exclude<ModalMode, null>) => {
-    setError("");
-    setModalMode(mode);
-
-    if (mode === "group") {
-      setGroupName("");
-    }
-
-    if (mode === "score") {
-      setScore("");
-    }
-
-    if (mode === "score" || mode === "editGroup" || mode === "removeGroup") {
-      const currentGroup = selectedGroup ?? leaderboard.groups[0];
-      setSelectedGroupId(currentGroup?.id ?? "");
-
-      if (mode === "editGroup") {
-        setGroupName(currentGroup?.name ?? "");
-      }
-    }
-  }, [leaderboard.groups, selectedGroup]);
-
   const openGroupDetails = useCallback((groupId: string) => {
     setSelectedDetailGroupId(groupId);
   }, []);
-
-  function closeModal() {
-    setError("");
-    setModalMode(null);
-    setGroupName("");
-    setScore("");
-  }
-
-  async function submitGroup(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/groups", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: groupName }),
-      });
-
-      const body = await response.json();
-
-      if (!response.ok) {
-        throw new Error(body.error ?? "Unable to add group.");
-      }
-
-      setLeaderboard(body as LeaderboardState);
-      closeModal();
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to add group.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function submitScore(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/scores", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupId: selectedGroupId, score }),
-      });
-
-      const body = await response.json();
-
-      if (!response.ok) {
-        throw new Error(body.error ?? "Unable to add score.");
-      }
-
-      setLeaderboard(body as LeaderboardState);
-      closeModal();
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to add score.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function submitEditGroup(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/groups", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupId: selectedGroupId, name: groupName }),
-      });
-
-      const body = await response.json();
-
-      if (!response.ok) {
-        throw new Error(body.error ?? "Unable to edit group.");
-      }
-
-      setLeaderboard(body as LeaderboardState);
-      closeModal();
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to edit group.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function submitRemoveGroup(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setError("");
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/groups", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupId: selectedGroupId }),
-      });
-
-      const body = await response.json();
-
-      if (!response.ok) {
-        throw new Error(body.error ?? "Unable to remove group.");
-      }
-
-      const nextState = body as LeaderboardState;
-      setLeaderboard(nextState);
-      setSelectedGroupId(nextState.groups[0]?.id ?? "");
-      closeModal();
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to remove group.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
 
   return (
     <main className="app-shell min-h-screen bg-[#0b0f14] text-[#eefcf6]">
@@ -697,200 +438,21 @@ export default function LeaderboardApp({
           </div>
         </header>
 
-        <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        {loadError ? (
+          <p className="rounded-md border border-[#ff5c7a]/40 bg-[#2a1018] px-4 py-3 text-sm font-semibold text-[#ffd8df]">
+            {loadError}
+          </p>
+        ) : null}
+
+        <section className="grid items-start gap-4">
           <RankingsCard
             groups={leaderboard.groups}
             scoresLength={leaderboard.scores.length}
             updatedAt={leaderboard.updatedAt}
             onOpenGroupDetails={openGroupDetails}
           />
-          <SessionPanel
-            groups={leaderboard.groups}
-            onOpenModal={openModal}
-          />
         </section>
       </section>
-
-      {modalMode ? (
-        <div
-          className="fixed inset-0 z-50 grid place-items-center bg-[#050806]/90 px-4 py-6"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="modal-title"
-        >
-          <div className="w-full max-w-md rounded-md border border-[#2d463f] bg-[#101820] p-5 text-[#eefcf6] shadow-xl">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 id="modal-title" className="font-mono text-xl font-bold uppercase text-[#26ffa7]">
-                  {modalTitle(modalMode)}
-                </h2>
-                <p className="mt-1 text-sm text-[#9fb8b0]">
-                  {modalDescription(modalMode)}
-                </p>
-              </div>
-              <button
-                className="h-9 w-9 rounded-md border border-[#2d463f] bg-[#0d1512] text-xl leading-none text-[#9fb8b0] transition hover:border-[#26ffa7] hover:text-[#26ffa7] focus:outline-none focus:ring-2 focus:ring-[#26ffa7] focus:ring-offset-2 focus:ring-offset-[#101820]"
-                type="button"
-                onClick={closeModal}
-                aria-label="Close"
-              >
-                x
-              </button>
-            </div>
-
-            {modalMode === "group" ? (
-              <form className="mt-5 grid gap-4" onSubmit={submitGroup}>
-                <label className="grid gap-2 font-mono text-sm font-bold uppercase text-[#d7fff1]" htmlFor="group-name">
-                  Group name
-                  <input
-                    id="group-name"
-                    className="h-11 rounded-md border border-[#2d463f] bg-[#0b0f14] px-3 text-base font-normal text-white outline-none transition focus:border-[#26ffa7] focus:ring-2 focus:ring-[#26ffa7]/20"
-                    value={groupName}
-                    maxLength={80}
-                    onChange={(event) => setGroupName(event.target.value)}
-                    autoFocus
-                  />
-                </label>
-                {error ? <p className="text-sm font-semibold text-[#ff5c7a]">{error}</p> : null}
-                <button
-                  className="h-11 rounded-md bg-[#26ffa7] px-4 font-mono text-sm font-bold uppercase text-[#07100d] transition hover:bg-[#8dffd4] disabled:cursor-not-allowed disabled:bg-[#47625e] disabled:text-[#9db9b4]"
-                  type="submit"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? "Adding..." : "Submit Group"}
-                </button>
-              </form>
-            ) : modalMode === "score" ? (
-              <form className="mt-5 grid gap-4" onSubmit={submitScore}>
-                <label className="grid gap-2 font-mono text-sm font-bold uppercase text-[#d7fff1]" htmlFor="score-group">
-                  Group
-                  <select
-                    id="score-group"
-                    className="h-11 rounded-md border border-[#2d463f] bg-[#0b0f14] px-3 text-base font-normal text-white outline-none transition focus:border-[#26ffa7] focus:ring-2 focus:ring-[#26ffa7]/20"
-                    value={selectedGroupId}
-                    onChange={(event) => setSelectedGroupId(event.target.value)}
-                  >
-                    {groupOptions}
-                  </select>
-                </label>
-
-                <label className="grid gap-2 font-mono text-sm font-bold uppercase text-[#d7fff1]" htmlFor="score-value">
-                  Score
-                  <input
-                    id="score-value"
-                    className="h-11 rounded-md border border-[#2d463f] bg-[#0b0f14] px-3 text-base font-normal text-white tabular-nums outline-none transition focus:border-[#26ffa7] focus:ring-2 focus:ring-[#26ffa7]/20"
-                    value={score}
-                    inputMode="text"
-                    pattern="-?[0-9]*"
-                    autoComplete="off"
-                    onChange={(event) => setScore(sanitizeScoreInput(event.target.value))}
-                    autoFocus
-                  />
-                </label>
-
-                {selectedGroup ? (
-                  <p className="text-sm text-[#9fb8b0]">
-                    Current total for {selectedGroup.name}:{" "}
-                    <span className="font-bold text-[#ffd166]">
-                      {selectedGroup.totalScore.toLocaleString()}
-                    </span>
-                  </p>
-                ) : null}
-
-                {error ? <p className="text-sm font-semibold text-[#ff5c7a]">{error}</p> : null}
-                <button
-                  className="h-11 rounded-md bg-[#ffd166] px-4 font-mono text-sm font-bold uppercase text-[#140f03] transition hover:bg-[#ffe39a] disabled:cursor-not-allowed disabled:bg-[#665b3d] disabled:text-[#b7ab86]"
-                  type="submit"
-                  disabled={isSubmitting || !selectedGroupId || !score || score === "-"}
-                >
-                  {isSubmitting ? "Adding..." : "Submit Score"}
-                </button>
-              </form>
-            ) : modalMode === "editGroup" ? (
-              <form className="mt-5 grid gap-4" onSubmit={submitEditGroup}>
-                <label className="grid gap-2 font-mono text-sm font-bold uppercase text-[#d7fff1]" htmlFor="edit-group">
-                  Group
-                  <select
-                    id="edit-group"
-                    className="h-11 rounded-md border border-[#2d463f] bg-[#0b0f14] px-3 text-base font-normal text-white outline-none transition focus:border-[#26ffa7] focus:ring-2 focus:ring-[#26ffa7]/20"
-                    value={selectedGroupId}
-                    onChange={(event) => {
-                      const nextGroup = leaderboard.groups.find(
-                        (group) => group.id === event.target.value,
-                      );
-                      setSelectedGroupId(event.target.value);
-                      setGroupName(nextGroup?.name ?? "");
-                    }}
-                  >
-                    {groupOptions}
-                  </select>
-                </label>
-
-                <label className="grid gap-2 font-mono text-sm font-bold uppercase text-[#d7fff1]" htmlFor="edit-group-name">
-                  Group name
-                  <input
-                    id="edit-group-name"
-                    className="h-11 rounded-md border border-[#2d463f] bg-[#0b0f14] px-3 text-base font-normal text-white outline-none transition focus:border-[#26ffa7] focus:ring-2 focus:ring-[#26ffa7]/20"
-                    value={groupName}
-                    maxLength={80}
-                    onChange={(event) => setGroupName(event.target.value)}
-                    autoFocus
-                  />
-                </label>
-
-                {selectedGroup ? (
-                  <p className="text-sm text-[#9fb8b0]">
-                    Current total:{" "}
-                    <span className="font-bold text-[#ffd166]">
-                      {selectedGroup.totalScore.toLocaleString()}
-                    </span>
-                  </p>
-                ) : null}
-
-                {error ? <p className="text-sm font-semibold text-[#ff5c7a]">{error}</p> : null}
-                <button
-                  className="h-11 rounded-md bg-[#5eead4] px-4 font-mono text-sm font-bold uppercase text-[#041412] transition hover:bg-[#99f6e4] disabled:cursor-not-allowed disabled:bg-[#47625e] disabled:text-[#9db9b4]"
-                  type="submit"
-                  disabled={isSubmitting || !selectedGroupId || !groupName.trim()}
-                >
-                  {isSubmitting ? "Saving..." : "Save Group"}
-                </button>
-              </form>
-            ) : (
-              <form className="mt-5 grid gap-4" onSubmit={submitRemoveGroup}>
-                <label className="grid gap-2 font-mono text-sm font-bold uppercase text-[#d7fff1]" htmlFor="remove-group">
-                  Group
-                  <select
-                    id="remove-group"
-                    className="h-11 rounded-md border border-[#2d463f] bg-[#0b0f14] px-3 text-base font-normal text-white outline-none transition focus:border-[#26ffa7] focus:ring-2 focus:ring-[#26ffa7]/20"
-                    value={selectedGroupId}
-                    onChange={(event) => setSelectedGroupId(event.target.value)}
-                  >
-                    {groupOptions}
-                  </select>
-                </label>
-
-                {selectedGroup ? (
-                  <div className="rounded-md border border-[#ff5c7a]/40 bg-[#2a1018] px-3 py-2 text-sm text-[#ffd8df]">
-                    Removing <span className="font-bold">{selectedGroup.name}</span> will delete{" "}
-                    <span className="font-bold tabular-nums">{selectedGroup.scoreCount}</span>{" "}
-                    scores.
-                  </div>
-                ) : null}
-
-                {error ? <p className="text-sm font-semibold text-[#ff5c7a]">{error}</p> : null}
-                <button
-                  className="h-11 rounded-md bg-[#ff5c7a] px-4 font-mono text-sm font-bold uppercase text-[#170408] transition hover:bg-[#ff8fa3] disabled:cursor-not-allowed disabled:bg-[#6a3b45] disabled:text-[#bd9aa2]"
-                  type="submit"
-                  disabled={isSubmitting || !selectedGroupId}
-                >
-                  {isSubmitting ? "Removing..." : "Remove Group"}
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      ) : null}
 
       {selectedDetailGroup ? (
         <div
