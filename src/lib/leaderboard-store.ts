@@ -168,15 +168,9 @@ export async function getLeaderboard(): Promise<LeaderboardState> {
 }
 
 export async function addGroup(name: string): Promise<LeaderboardState> {
-  const trimmedName = name.trim().replace(/\s+/g, " ");
+  const trimmedName = normalizeGroupName(name);
 
-  if (trimmedName.length < 1) {
-    throw new Error("Group name is required.");
-  }
-
-  if (trimmedName.length > 80) {
-    throw new Error("Group name must be 80 characters or fewer.");
-  }
+  validateGroupName(trimmedName);
 
   const state = await withWriteQueue(async () => {
     const data = await readStore();
@@ -209,9 +203,72 @@ export async function addGroup(name: string): Promise<LeaderboardState> {
   return state;
 }
 
+export async function editGroup(groupId: string, name: string): Promise<LeaderboardState> {
+  const trimmedName = normalizeGroupName(name);
+
+  validateGroupName(trimmedName);
+
+  const state = await withWriteQueue(async () => {
+    const data = await readStore();
+    const groupExists = data.groups.some((group) => group.id === groupId);
+
+    if (!groupExists) {
+      throw new Error("Choose an existing group before editing.");
+    }
+
+    const nameExists = data.groups.some(
+      (group) =>
+        group.id !== groupId &&
+        group.name.toLocaleLowerCase() === trimmedName.toLocaleLowerCase(),
+    );
+
+    if (nameExists) {
+      throw new Error("A group with this name already exists.");
+    }
+
+    const updated: StoredLeaderboard = {
+      ...data,
+      groups: data.groups.map((group) =>
+        group.id === groupId ? { ...group, name: trimmedName } : group,
+      ),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await writeStore(updated);
+    return toLeaderboardState(updated);
+  });
+
+  publishLeaderboard(state);
+  return state;
+}
+
+export async function removeGroup(groupId: string): Promise<LeaderboardState> {
+  const state = await withWriteQueue(async () => {
+    const data = await readStore();
+    const groupExists = data.groups.some((group) => group.id === groupId);
+
+    if (!groupExists) {
+      throw new Error("Choose an existing group before removing.");
+    }
+
+    const updated: StoredLeaderboard = {
+      ...data,
+      groups: data.groups.filter((group) => group.id !== groupId),
+      scores: data.scores.filter((score) => score.groupId !== groupId),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await writeStore(updated);
+    return toLeaderboardState(updated);
+  });
+
+  publishLeaderboard(state);
+  return state;
+}
+
 export async function addScore(groupId: string, score: string): Promise<LeaderboardState> {
-  if (!/^\d+$/.test(score)) {
-    throw new Error("Score must contain digits only.");
+  if (!/^-?\d+$/.test(score)) {
+    throw new Error("Score must be a whole number.");
   }
 
   const value = Number(score);
@@ -248,6 +305,20 @@ export async function addScore(groupId: string, score: string): Promise<Leaderbo
 
   publishLeaderboard(state);
   return state;
+}
+
+function normalizeGroupName(name: string) {
+  return name.trim().replace(/\s+/g, " ");
+}
+
+function validateGroupName(name: string) {
+  if (name.length < 1) {
+    throw new Error("Group name is required.");
+  }
+
+  if (name.length > 80) {
+    throw new Error("Group name must be 80 characters or fewer.");
+  }
 }
 
 export function subscribeToLeaderboard(subscriber: Subscriber) {

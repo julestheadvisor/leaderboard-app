@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0b0f14;
+  --foreground: #eefcf6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: Arial, Helvetica, sans-serif;
-  --font-mono: "Courier New", Courier, monospace;
+  --font-mono: "Cascadia Mono", "Consolas", "Lucida Console", monospace;
 }
 
 body {
@@ -18,8 +18,16 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-button,
 input,
 select {
   font: inherit;
+}
+
+button {
+  font-family: "Cascadia Mono", Consolas, "Lucida Console", monospace;
+}
+
+input::selection {
+  background: #26ffa7;
+  color: #07100d;
 }

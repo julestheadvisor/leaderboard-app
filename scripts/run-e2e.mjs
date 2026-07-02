@@ -2,11 +2,12 @@ import { spawn } from "node:child_process";
 import { setTimeout as wait } from "node:timers/promises";
 
 const port = process.env.PORT ?? "3000";
+const host = process.env.HOST ?? "0.0.0.0";
 const baseUrl = `http://localhost:${port}`;
 
 const server = spawn(
   process.execPath,
-  ["node_modules/next/dist/bin/next", "dev", "--hostname", "localhost", "--port", port],
+  ["node_modules/next/dist/bin/next", "dev", "--hostname", host, "--port", port],
   {
     cwd: process.cwd(),
     env: { ...process.env, PORT: port },
