@@ -18,6 +18,13 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+.app-shell {
+  background-image:
+    linear-gradient(rgba(38, 255, 167, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 255, 167, 0.06) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
 input,
 select {
   font: inherit;
@@ -30,4 +37,10 @@ button {
 input::selection {
   background: #26ffa7;
   color: #07100d;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    background-image: none;
+  }
 }
