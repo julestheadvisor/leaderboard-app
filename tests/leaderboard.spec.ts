@@ -17,7 +17,7 @@ test("syncs groups and scores across judge screens", async ({ browser }) => {
   await judgeOne.getByLabel("Group name").fill(groupName);
   await judgeOne.getByRole("button", { name: "Submit Group" }).click();
 
-  await expect(judgeTwo.getByRole("cell", { name: groupName })).toBeVisible({
+  await expect(judgeTwo.getByText(groupName, { exact: true })).toBeVisible({
     timeout: 15_000,
   });
 
@@ -27,8 +27,8 @@ test("syncs groups and scores across judge screens", async ({ browser }) => {
   await expect(judgeTwo.getByRole("textbox", { name: "Score" })).toHaveValue("427");
   await judgeTwo.getByRole("button", { name: "Submit Score" }).click();
 
-  const row = judgeOne.getByRole("row").filter({ hasText: groupName });
-  await expect(row.getByRole("cell", { name: "427", exact: true })).toBeVisible({
+  const row = judgeOne.getByRole("button").filter({ hasText: groupName });
+  await expect(row.getByText("427", { exact: true })).toBeVisible({
     timeout: 15_000,
   });
   await expect(row.getByText("+427", { exact: true })).toBeVisible();
@@ -41,18 +41,26 @@ test("syncs groups and scores across judge screens", async ({ browser }) => {
   await expect(judgeTwo.getByRole("textbox", { name: "Score" })).toHaveValue("-27");
   await judgeTwo.getByRole("button", { name: "Submit Score" }).click();
 
-  await expect(row.getByRole("cell", { name: "400", exact: true })).toBeVisible({
+  await expect(row.getByText("400", { exact: true })).toBeVisible({
     timeout: 15_000,
   });
   await expect(row.getByText("-27", { exact: true })).toBeVisible();
+
+  await row.click();
+  const detailDialog = judgeOne.getByRole("dialog", { name: new RegExp(groupName) });
+  await expect(detailDialog).toBeVisible();
+  await expect(detailDialog.getByText("Score history")).toBeVisible();
+  await expect(detailDialog.getByText("+427", { exact: true })).toBeVisible();
+  await expect(detailDialog.getByText("-27", { exact: true })).toBeVisible();
+  await detailDialog.getByLabel("Close").click();
 
   await judgeTwo.getByRole("button", { name: "Edit Group" }).click();
   await judgeTwo.locator("#edit-group").selectOption({ label: groupName });
   await judgeTwo.getByLabel("Group name").fill(editedGroupName);
   await judgeTwo.getByRole("button", { name: "Save Group" }).click();
 
-  const editedRow = judgeOne.getByRole("row").filter({ hasText: editedGroupName });
-  await expect(editedRow.getByRole("cell", { name: "400", exact: true })).toBeVisible({
+  const editedRow = judgeOne.getByRole("button").filter({ hasText: editedGroupName });
+  await expect(editedRow.getByText("400", { exact: true })).toBeVisible({
     timeout: 15_000,
   });
 
@@ -63,7 +71,7 @@ test("syncs groups and scores across judge screens", async ({ browser }) => {
     .getByRole("button", { name: "Remove Group" })
     .click();
 
-  await expect(judgeOne.getByRole("cell", { name: editedGroupName })).toBeHidden({
+  await expect(judgeOne.getByText(editedGroupName, { exact: true })).toBeHidden({
     timeout: 15_000,
   });
 

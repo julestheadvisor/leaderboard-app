@@ -1,6 +1,15 @@
 "use client";
 
-import { FormEvent, memo, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  FormEvent,
+  memo,
+  useCallback,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useEffect,
+} from "react";
 
 type ScoreEntry = {
   id: string;
@@ -29,6 +38,7 @@ type LeaderboardState = {
 type ModalMode = "group" | "score" | "editGroup" | "removeGroup" | null;
 type ConnectionState = "connecting" | "connected" | "reconnecting";
 type OpenModal = (mode: Exclude<ModalMode, null>) => void;
+type OpenGroupDetails = (groupId: string) => void;
 
 const emptyState: LeaderboardState = {
   groups: [],
@@ -72,6 +82,38 @@ function formatScoreDelta(value: number) {
   return value > 0 ? `+${value.toLocaleString()}` : value.toLocaleString();
 }
 
+function podiumRowClass(rank: number) {
+  if (rank === 1) {
+    return "bg-[#2a2413] shadow-[inset_4px_0_0_#ffd166]";
+  }
+
+  if (rank === 2) {
+    return "bg-[#202a2f] shadow-[inset_4px_0_0_#cbd5e1]";
+  }
+
+  if (rank === 3) {
+    return "bg-[#2a1d17] shadow-[inset_4px_0_0_#c58b5b]";
+  }
+
+  return "";
+}
+
+function rankBadgeClass(rank: number) {
+  if (rank === 1) {
+    return "border-[#ffd166] bg-[#3a2a08] text-[#ffd166] shadow-[0_0_18px_rgba(255,209,102,0.24)]";
+  }
+
+  if (rank === 2) {
+    return "border-[#cbd5e1] bg-[#26313a] text-[#e2e8f0] shadow-[0_0_18px_rgba(203,213,225,0.18)]";
+  }
+
+  if (rank === 3) {
+    return "border-[#c58b5b] bg-[#351d10] text-[#f0b47d] shadow-[0_0_18px_rgba(197,139,91,0.2)]";
+  }
+
+  return "border-[#26ffa7]/40 bg-[#112d25] text-[#26ffa7] shadow-[0_0_16px_rgba(38,255,167,0.12)]";
+}
+
 function modalTitle(mode: Exclude<ModalMode, null>) {
   switch (mode) {
     case "group":
@@ -102,13 +144,141 @@ const RankingsCard = memo(function RankingsCard({
   groups,
   scoresLength,
   updatedAt,
+  onOpenGroupDetails,
 }: {
   groups: LeaderboardGroup[];
   scoresLength: number;
   updatedAt: string;
+  onOpenGroupDetails: OpenGroupDetails;
 }) {
+  const rowRefs = useRef(new Map<string, HTMLDivElement>());
+  const previousRows = useRef(new Map<string, { rect: DOMRect; rank: number; scoreCount: number }>());
+  const boostedRow = useRef<HTMLDivElement | null>(null);
+  const boostTimeout = useRef<number | null>(null);
+
+  const setRowRef = useCallback(
+    (groupId: string) => (node: HTMLDivElement | null) => {
+      if (node) {
+        rowRefs.current.set(groupId, node);
+      } else {
+        rowRefs.current.delete(groupId);
+      }
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    const nextRows = new Map<string, { rect: DOMRect; rank: number; scoreCount: number }>();
+
+    for (const group of groups) {
+      const row = rowRefs.current.get(group.id);
+      if (row) {
+        nextRows.set(group.id, {
+          rect: row.getBoundingClientRect(),
+          rank: group.rank,
+          scoreCount: group.scoreCount,
+        });
+      }
+    }
+
+    const previous = previousRows.current;
+    let promotedGroupId: string | null = null;
+    let largestRankJump = 0;
+
+    for (const group of groups) {
+      const before = previous.get(group.id);
+      const rankJump = before ? before.rank - group.rank : 0;
+
+      if (before && group.scoreCount > before.scoreCount && rankJump > largestRankJump) {
+        promotedGroupId = group.id;
+        largestRankJump = rankJump;
+      }
+    }
+
+    const shouldAnimate =
+      promotedGroupId !== null &&
+      !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    if (shouldAnimate) {
+      if (boostTimeout.current) {
+        window.clearTimeout(boostTimeout.current);
+      }
+
+      if (boostedRow.current) {
+        boostedRow.current.style.backgroundColor = "";
+        boostedRow.current.style.boxShadow = "";
+      }
+
+      boostedRow.current = rowRefs.current.get(promotedGroupId) ?? null;
+
+      if (boostedRow.current) {
+        boostedRow.current.style.backgroundColor = "#173629";
+        boostedRow.current.style.boxShadow = "0 0 26px rgba(38, 255, 167, 0.22)";
+      }
+
+      boostTimeout.current = window.setTimeout(() => {
+        if (boostedRow.current) {
+          boostedRow.current.style.backgroundColor = "";
+          boostedRow.current.style.boxShadow = "";
+          boostedRow.current = null;
+        }
+      }, 900);
+
+      for (const group of groups) {
+        const row = rowRefs.current.get(group.id);
+        const before = previous.get(group.id);
+        const after = nextRows.get(group.id);
+
+        if (!row || !before || !after) {
+          continue;
+        }
+
+        const deltaX = before.rect.left - after.rect.left;
+        const deltaY = before.rect.top - after.rect.top;
+
+        if (Math.abs(deltaX) < 1 && Math.abs(deltaY) < 1) {
+          continue;
+        }
+
+        const isPromoted = group.id === promotedGroupId;
+
+        row.style.position = "relative";
+        row.style.zIndex = isPromoted ? "2" : "1";
+        row.style.transition = "none";
+        row.style.transform = `translate(${deltaX}px, ${deltaY}px) scale(${isPromoted ? 1.08 : 1})`;
+
+        window.requestAnimationFrame(() => {
+          row.style.transition =
+            "transform 700ms cubic-bezier(0.16, 1, 0.3, 1), background-color 700ms ease, box-shadow 700ms ease";
+          row.style.transform = "translate(0, 0) scale(1)";
+
+          window.setTimeout(() => {
+            row.style.position = "";
+            row.style.zIndex = "";
+            row.style.transition = "";
+            row.style.transform = "";
+          }, 760);
+        });
+      }
+    }
+
+    previousRows.current = nextRows;
+  }, [groups]);
+
+  useEffect(() => {
+    return () => {
+      if (boostTimeout.current) {
+        window.clearTimeout(boostTimeout.current);
+      }
+      if (boostedRow.current) {
+        boostedRow.current.style.backgroundColor = "";
+        boostedRow.current.style.boxShadow = "";
+      }
+    };
+  }, []);
+
   return (
-    <div className="overflow-hidden rounded-md border border-[#2d463f] bg-[#101820]/95 shadow-[0_0_28px_rgba(38,255,167,0.08)]">
+    <div className="overflow-visible rounded-md border border-[#2d463f] bg-[#101820]/95 shadow-[0_0_28px_rgba(38,255,167,0.08)]">
       <div className="flex flex-col gap-1 border-b border-[#24342f] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="font-mono text-lg font-bold uppercase text-[#26ffa7]">Rankings</h2>
         <p className="font-mono text-xs text-[#9fb8b0]">
@@ -128,37 +298,52 @@ const RankingsCard = memo(function RankingsCard({
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full table-fixed text-left">
-            <thead className="border-b border-[#24342f] bg-[#17231f] font-mono text-xs uppercase text-[#26ffa7]">
-              <tr>
-                <th className="w-[10%] px-4 py-3 font-bold">Place</th>
-                <th className="w-[30%] px-4 py-3 font-bold">Group</th>
-                <th className="w-[30%] px-4 py-3 font-bold">Total</th>
-                <th className="w-[30%] px-4 py-3 font-bold">Latest</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#1f312c]">
-              {groups.map((group) => (
-                <tr key={group.id} className="transition hover:bg-[#13241e]">
-                  <td className="px-4 py-4 align-middle">
-                    <span className="inline-flex min-w-14 justify-center rounded-md border border-[#26ffa7]/40 bg-[#112d25] px-2 py-1 font-mono text-sm font-bold text-[#26ffa7] shadow-[0_0_16px_rgba(38,255,167,0.12)]">
-                      {ordinal(group.rank)}
-                    </span>
-                  </td>
-                  <td className="px-4 py-4 align-middle">
-                    <div className="font-bold text-white">{group.name}</div>
-                  </td>
-                  <td className="px-4 py-4 align-middle text-2xl font-black text-[#ffd166] tabular-nums">
+        <div className="overflow-visible">
+          <div className="grid grid-cols-[10%_30%_30%_30%] border-b border-[#24342f] bg-[#17231f] font-mono text-xs font-bold uppercase text-[#26ffa7]">
+            <div className="px-4 py-3">Place</div>
+            <div className="px-4 py-3">Group</div>
+            <div className="px-4 py-3">Total</div>
+            <div className="px-4 py-3">Latest</div>
+          </div>
+          <div className="grid gap-1 overflow-visible px-2 py-2">
+            {groups.map((group) => (
+              <div
+                key={group.id}
+                ref={setRowRef(group.id)}
+                className={`group/row grid cursor-pointer grid-cols-[10%_30%_30%_30%] rounded-md border border-[#1f312c] transition duration-200 hover:relative hover:z-10 hover:scale-[1.012] hover:drop-shadow-[0_14px_34px_rgba(0,0,0,0.35)] focus:outline-none focus:ring-2 focus:ring-[#26ffa7] focus:ring-offset-2 focus:ring-offset-[#101820] ${podiumRowClass(group.rank)}`}
+                role="button"
+                tabIndex={0}
+                onClick={() => onOpenGroupDetails(group.id)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onOpenGroupDetails(group.id);
+                  }
+                }}
+              >
+                <div className="px-4 py-3">
+                  <span
+                    className={`inline-flex min-w-14 justify-center rounded-md border px-2 py-1 font-mono text-sm font-bold ${rankBadgeClass(group.rank)}`}
+                  >
+                    {ordinal(group.rank)}
+                  </span>
+                </div>
+                <div className="flex items-center px-4 py-3">
+                  <div className="font-bold text-white">{group.name}</div>
+                </div>
+                <div className="flex items-center px-4 py-3">
+                  <div className="text-2xl font-black text-[#ffd166] tabular-nums">
                     {group.totalScore.toLocaleString()}
-                  </td>
-                  <td className="px-4 py-4 align-middle text-[#d7fff1] tabular-nums">
+                  </div>
+                </div>
+                <div className="flex items-center px-4 py-3">
+                  <div className="text-[#d7fff1] tabular-nums">
                     {group.lastScore === null ? "-" : formatScoreDelta(group.lastScore)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -167,11 +352,9 @@ const RankingsCard = memo(function RankingsCard({
 
 const SessionPanel = memo(function SessionPanel({
   groups,
-  scoresLength,
   onOpenModal,
 }: {
   groups: LeaderboardGroup[];
-  scoresLength: number;
   onOpenModal: OpenModal;
 }) {
   return (
@@ -181,10 +364,6 @@ const SessionPanel = memo(function SessionPanel({
         <div className="flex items-center justify-between border-b border-[#24342f] pb-3">
           <dt className="text-[#9fb8b0]">Groups</dt>
           <dd className="font-bold text-white tabular-nums">{groups.length}</dd>
-        </div>
-        <div className="flex items-center justify-between border-b border-[#24342f] pb-3">
-          <dt className="text-[#9fb8b0]">Submitted scores</dt>
-          <dd className="font-bold text-white tabular-nums">{scoresLength}</dd>
         </div>
         <div className="flex items-center justify-between">
           <dt className="text-[#9fb8b0]">Leader</dt>
@@ -239,6 +418,7 @@ export default function LeaderboardApp({
   const [modalMode, setModalMode] = useState<ModalMode>(null);
   const [groupName, setGroupName] = useState("");
   const [selectedGroupId, setSelectedGroupId] = useState(initialState.groups[0]?.id ?? "");
+  const [selectedDetailGroupId, setSelectedDetailGroupId] = useState<string | null>(null);
   const [score, setScore] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -247,6 +427,21 @@ export default function LeaderboardApp({
   const selectedGroup = useMemo(
     () => leaderboard.groups.find((group) => group.id === selectedGroupId),
     [leaderboard.groups, selectedGroupId],
+  );
+
+  const selectedDetailGroup = useMemo(
+    () => leaderboard.groups.find((group) => group.id === selectedDetailGroupId),
+    [leaderboard.groups, selectedDetailGroupId],
+  );
+
+  const selectedDetailScores = useMemo(
+    () =>
+      selectedDetailGroup
+        ? leaderboard.scores
+            .filter((entry) => entry.groupId === selectedDetailGroup.id)
+            .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        : [],
+    [leaderboard.scores, selectedDetailGroup],
   );
 
   const groupOptions = useMemo(
@@ -339,6 +534,10 @@ export default function LeaderboardApp({
       }
     }
   }, [leaderboard.groups, selectedGroup]);
+
+  const openGroupDetails = useCallback((groupId: string) => {
+    setSelectedDetailGroupId(groupId);
+  }, []);
 
   function closeModal() {
     setError("");
@@ -496,10 +695,10 @@ export default function LeaderboardApp({
             groups={leaderboard.groups}
             scoresLength={leaderboard.scores.length}
             updatedAt={leaderboard.updatedAt}
+            onOpenGroupDetails={openGroupDetails}
           />
           <SessionPanel
             groups={leaderboard.groups}
-            scoresLength={leaderboard.scores.length}
             onOpenModal={openModal}
           />
         </section>
@@ -682,6 +881,81 @@ export default function LeaderboardApp({
                 </button>
               </form>
             )}
+          </div>
+        </div>
+      ) : null}
+
+      {selectedDetailGroup ? (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-[#050806]/90 px-4 py-6"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="group-details-title"
+        >
+          <div className="w-full max-w-lg rounded-md border border-[#2d463f] bg-[#101820] p-5 text-[#eefcf6] shadow-xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="font-mono text-xs font-bold uppercase text-[#26ffa7]">
+                  Current ranking
+                </p>
+                <h2
+                  id="group-details-title"
+                  className="mt-1 font-mono text-2xl font-black uppercase text-white"
+                >
+                  {ordinal(selectedDetailGroup.rank)} - {selectedDetailGroup.name}
+                </h2>
+              </div>
+              <button
+                className="h-9 w-9 rounded-md border border-[#2d463f] bg-[#0d1512] text-xl leading-none text-[#9fb8b0] transition hover:border-[#26ffa7] hover:text-[#26ffa7] focus:outline-none focus:ring-2 focus:ring-[#26ffa7] focus:ring-offset-2 focus:ring-offset-[#101820]"
+                type="button"
+                onClick={() => setSelectedDetailGroupId(null)}
+                aria-label="Close"
+              >
+                x
+              </button>
+            </div>
+
+            <dl className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-md border border-[#24342f] bg-[#0b0f14] p-3">
+                <dt className="font-mono text-xs font-bold uppercase text-[#9fb8b0]">Rank</dt>
+                <dd className="mt-1 text-2xl font-black text-[#26ffa7]">
+                  {ordinal(selectedDetailGroup.rank)}
+                </dd>
+              </div>
+              <div className="rounded-md border border-[#24342f] bg-[#0b0f14] p-3 sm:col-span-2">
+                <dt className="font-mono text-xs font-bold uppercase text-[#9fb8b0]">Score</dt>
+                <dd className="mt-1 text-2xl font-black text-[#ffd166] tabular-nums">
+                  {selectedDetailGroup.totalScore.toLocaleString()}
+                </dd>
+              </div>
+            </dl>
+
+            <section className="mt-5">
+              <h3 className="font-mono text-sm font-bold uppercase text-[#d7fff1]">
+                Score history
+              </h3>
+              {selectedDetailScores.length === 0 ? (
+                <p className="mt-3 rounded-md border border-[#24342f] bg-[#0b0f14] p-3 text-sm text-[#9fb8b0]">
+                  No score history yet.
+                </p>
+              ) : (
+                <div className="mt-3 max-h-72 overflow-y-auto rounded-md border border-[#24342f] bg-[#0b0f14]">
+                  {selectedDetailScores.map((entry) => (
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between gap-4 border-b border-[#1f312c] px-3 py-3 last:border-b-0"
+                    >
+                      <span className="font-mono text-xs text-[#9fb8b0]">
+                        {formatDateTime(entry.createdAt)}
+                      </span>
+                      <span className="font-mono text-sm font-bold text-[#d7fff1] tabular-nums">
+                        {formatScoreDelta(entry.value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
           </div>
         </div>
       ) : null}

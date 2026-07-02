@@ -61,7 +61,19 @@
       "groupId": "95bdb003-beb6-4ede-95bc-88f2de3575cf",
       "value": 5,
       "createdAt": "2026-07-02T03:54:38.552Z"
+    },
+    {
+      "id": "66fc06c3-a51b-4e0d-809d-f5a72f952213",
+      "groupId": "65712643-02e3-4b94-8d90-c8f19d926057",
+      "value": 74538,
+      "createdAt": "2026-07-02T04:08:17.794Z"
+    },
+    {
+      "id": "3de3e11b-42da-4381-b722-8b6ab71bbaab",
+      "groupId": "9f06999a-818d-4a92-afd8-f7a28798890d",
+      "value": 5,
+      "createdAt": "2026-07-02T04:11:01.659Z"
     }
   ],
-  "updatedAt": "2026-07-02T04:00:54.393Z"
+  "updatedAt": "2026-07-02T04:11:01.659Z"
 }
